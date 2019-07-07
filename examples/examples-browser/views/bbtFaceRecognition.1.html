@@ -154,6 +154,11 @@
         return
       }
 
+      if (!faceMatcher) {
+        alert("请先选择要被点名的人。")
+        return
+      }
+
       const inputImgEl = $('#inputImg').get(0)
      
       const videoEl = $('#inputVideo').get(0)
@@ -226,11 +231,8 @@ console.log(results.length)
         
 /*
       const options = getFaceDetectorOptions()
-
       const ts = Date.now()
-
-   //   const result = await faceapi.detectSingleFace(videoEl, options)
-      //const result = await faceapi.detectAllFaces(videoEl, options)
+   //   const result = await faceapi.detectSingleFace(videoEl, options)     
 
 ///      updateTimeStats(Date.now() - ts)
 
@@ -264,11 +266,35 @@ console.log(results.length)
       g_faceImages = g_faceImages.concat(faceImages)
 
       displayExtractedFaces(g_faceImages)
+
+      /// update matcher
+      faceMatcher = await createFaceMatcher()
     }
     function displayExtractedFaces(faceImages) {
       $('#facesContainer').empty()
       faceImages.forEach(canvas => $('#facesContainer').append(canvas))
     }
+/////
+
+// fetch first image of each class and compute their descriptors
+async function createFaceMatcher() {
+  const maxAvailableImagesPerClass = 5
+  
+  var i = 1;
+  const labeledFaceDescriptors = await Promise.all(g_faceImages.map(
+    async img => {
+      const descriptors = []          
+      descriptors.push(await faceapi.computeFaceDescriptor(img))
+  
+      return new faceapi.LabeledFaceDescriptors(
+        "name_" + i++,
+        descriptors
+      )
+    }
+  ))
+
+  return new faceapi.FaceMatcher(labeledFaceDescriptors)
+}
 
 
     async function run() {
@@ -278,7 +304,8 @@ console.log(results.length)
       await faceapi.loadFaceRecognitionModel('/')
 
       // initialize face matcher with 1 reference descriptor per bbt character
-      faceMatcher = await createBbtFaceMatcher(1)
+///      faceMatcher = await createBbtFaceMatcher(1)
+     
 
 // await changeFaceDetector(TINY_FACE_DETECTOR)
 //      changeInputSize(128)
