@@ -93,8 +93,8 @@ export async function assembleExpectedFullFaceDescriptions(
   detections: IRect[],
   landmarksFile: string = 'facesFaceLandmarkPositions.json'
 ): Promise<ExpectedFullFaceDescription[]> {
-  const landmarks = await loadJson<any[]>(`test/data/${landmarksFile}`)
-  const descriptors = await loadJson<any[]>('test/data/facesFaceDescriptors.json')
+  const landmarks = await loadJson(`test/data/${landmarksFile}`)
+  const descriptors = await loadJson('test/data/facesFaceDescriptors.json')
 
   return detections.map((detection, i) => ({
     detection,
@@ -139,13 +139,7 @@ export type DescribeWithNetsOptions = {
   withTinyYolov2?: WithTinyYolov2Options
 }
 
-const gpgpu = tf.backend()['gpgpu']
-
-if (gpgpu) {
-  console.log('running tests on WebGL backend')
-} else {
-  console.log('running tests on CPU backend')
-}
+const gpgpu = tf.ENV.backend['gpgpu']
 
 export function describeWithBackend(description: string, specDefinitions: () => void) {
 
@@ -160,13 +154,13 @@ export function describeWithBackend(description: string, specDefinitions: () => 
 
   describe(description, () => {
     beforeAll(() => {
-      tf.registerBackend(newBackendName, () => backend)
+      tf.ENV.registerBackend(newBackendName, () => backend)
       tf.setBackend(newBackendName)
     })
 
     afterAll(() => {
       tf.setBackend(defaultBackendName)
-      tf.removeBackend(newBackendName)
+      tf.ENV.removeBackend(newBackendName)
       backend.dispose()
     })
 

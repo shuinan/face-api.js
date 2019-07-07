@@ -57,6 +57,10 @@ function renderNavBar(navbarId, exampleUri) {
       name: 'Webcam Face Detection'
     },
     {
+      uri: 'webcam_1',
+      name: 'Webcam  1'
+    },
+    {
       uri: 'webcam_face_landmark_detection',
       name: 'Webcam Face Landmark Detection'
     },
@@ -83,6 +87,10 @@ function renderNavBar(navbarId, exampleUri) {
     {
       uri: 'bbt_face_recognition',
       name: 'BBT Face Recognition'
+    },
+    {
+      uri: 'bbt_face_recognition_1',
+      name: 'BBT Face Recognition more'
     },
     {
       uri: 'batch_face_landmarks',
