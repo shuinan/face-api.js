@@ -160,6 +160,7 @@
       }
 
       const inputImgEl = $('#inputImg').get(0)
+      
      
       const videoEl = $('#inputVideo').get(0)
       if(videoEl.paused || videoEl.ended || !isFaceDetectionModelLoaded())
@@ -316,6 +317,8 @@ async function createFaceMatcher() {
       const videoEl = $('#inputVideo').get(0)
       videoEl.srcObject = stream
 
+      const inputImgEl = $('#inputImg').get(0)
+      inputImgEl.style.display = "none";
     }
 
     $(document).ready(function() {
