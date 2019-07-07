@@ -22,13 +22,22 @@
       <img id="inputImg" src="" style="max-width: 800px;" />
       <canvas id="overlay" />
     </div>
+    
+
     <div style="position: relative" class="margin">
       <video onloadedmetadata="onPlay(this)" id="inputVideo" autoplay muted></video>
       <button  class="waves-effect waves-light btn" onclick="startRollcall()">  <i class="material-icons left">开始点名</i> </button>        
       <button  class="waves-effect waves-light btn" onclick="stopRollcall()"> <i class="material-icons left">结束点名</i></button>        
     </div>
-    <div class="row side-by-side">
 
+    <div style="position: relative" class="margin">      
+      <button  class="waves-effect waves-light btn" onclick="extractPhoto()">  <i class="material-icons left">选择要被点名的人</i> </button>              
+    </div>
+
+    <label for="facesContainer">演示从照片中得到要被点名的人</label>
+    <div id="facesContainer"></div>
+
+    <div class="row side-by-side">
       <!-- face_detector_selection_control -->
       <div id="face_detector_selection_control" class="row input-field" style="margin-right: 20px;">
         <select id="selectFaceDetector">
@@ -62,8 +71,8 @@
     <span id="ssd_mobilenetv1_controls">
       <div class="row side-by-side">
         <div class="row">
-          <label for="attendeesList"></label>                              
-          <input disabled value="20" id="attendeesList" type="text" class="bold">          
+          <label for="attendeesList">点名结果</label>                              
+          <input disabled value="100" id="attendeesList" type="text" class="bold">          
         </div>        
       </div>
     </span>
@@ -133,6 +142,9 @@
     let faceMatcher = null
     let roll_calling = true
     let attendees = new Set()
+    let g_detections = new Array
+    let g_faceImages = new Array
+
 
     async function updateResults() {
       if (!roll_calling)
@@ -185,7 +197,7 @@ console.log(results.length)
   
           let al = "";
           for (a of attendees) {
-            al += a + " "
+            al += a + "; "
           }         
           $('#attendeesList').val(al)      
         }
@@ -229,6 +241,33 @@ console.log(results.length)
       }
 */
       setTimeout(() => onPlay())
+    }
+
+
+///// for extract photo
+    async function extractPhoto() {
+      if (!isFaceDetectionModelLoaded()) {
+        return
+      }
+
+      const videoEl = $('#inputVideo').get(0)
+      if(videoEl.paused || videoEl.ended || !isFaceDetectionModelLoaded())
+       return setTimeout(() => extractPhoto())
+
+      const inputImgEl = $('#inputImg').get(0)
+      const options = getFaceDetectorOptions()
+
+      const detections = await faceapi.detectAllFaces(videoEl, options)
+      const faceImages = await faceapi.extractFaces(videoEl, detections)
+
+      g_detections = g_detections.concat(detections)
+      g_faceImages = g_faceImages.concat(faceImages)
+
+      displayExtractedFaces(g_faceImages)
+    }
+    function displayExtractedFaces(faceImages) {
+      $('#facesContainer').empty()
+      faceImages.forEach(canvas => $('#facesContainer').append(canvas))
     }
 
 
