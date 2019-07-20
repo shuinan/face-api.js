@@ -18,7 +18,8 @@
     <div class="progress" id="loader">
       <div class="indeterminate"></div>
     </div>
-        
+    
+    
 
     <div style="position: relative" class="margin">
       <video  id="inputVideo" autoplay muted></video>
@@ -34,36 +35,6 @@
     <label for="facesContainer">演示从照片中得到要被点名的人</label>
     <div id="facesContainer"></div>
 
-    <div class="row side-by-side">
-      <!-- face_detector_selection_control -->
-      <div id="face_detector_selection_control" class="row input-field" style="margin-right: 20px;">
-        <select id="selectFaceDetector">
-          <option value="ssd_mobilenetv1">SSD Mobilenet V1</option>
-          <option value="tiny_face_detector">Tiny Face Detector</option>
-          <option value="mtcnn">MTCNN</option>
-        </select>
-        <label>Select Face Detector</label>
-      </div>
-      <!-- face_detector_selection_control -->
-
-      <!-- image_selection_control -->
-      <div id="image_selection_control"></div>
-        <div id="selectList"></div>
-        <div class="row">
-          <label for="imgUrlInput">Get image from URL:</label>
-          <input id="imgUrlInput" type="text" class="bold">
-        </div>
-        <button
-          class="waves-effect waves-light btn"
-          onclick="loadImageFromUrl()"
-        >
-          Ok
-        </button>
-      <div id="image_selection_control"></div>
-      <!-- image_selection_control -->
-
-    </div>
-
     <!-- ssd_mobilenetv1_controls -->
     <span id="ssd_mobilenetv1_controls">
       <div class="row side-by-side">
@@ -74,65 +45,7 @@
       </div>
     </span>
     <!-- ssd_mobilenetv1_controls -->
-
-    <!-- tiny_face_detector_controls -->
-    <span id="tiny_face_detector_controls">
-      <div class="row side-by-side">
-        <div class="row input-field" style="margin-right: 20px;">
-          <select id="inputSize">
-            <option value="" disabled selected>Input Size:</option>
-            <option value="160">160 x 160</option>
-            <option value="224">224 x 224</option>
-            <option value="320">320 x 320</option>
-            <option value="416">416 x 416</option>
-            <option value="512">512 x 512</option>
-            <option value="608">608 x 608</option>
-          </select>
-          <label>Input Size</label>
-        </div>
-        <div class="row">
-          <label for="scoreThreshold">Score Threshold:</label>
-          <input disabled value="0.5" id="scoreThreshold" type="text" class="bold">
-        </div>
-        <button
-          class="waves-effect waves-light btn"
-          onclick="onDecreaseScoreThreshold()"
-        >
-          <i class="material-icons left">-</i>
-        </button>
-        <button
-          class="waves-effect waves-light btn"
-          onclick="onIncreaseScoreThreshold()"
-        >
-          <i class="material-icons left">+</i>
-        </button>
-      </div>
-    </span>
-    <!-- tiny_face_detector_controls -->
-
-    <!-- mtcnn_controls -->
-    <span id="mtcnn_controls">
-      <div class="row side-by-side">
-        <div class="row">
-          <label for="minFaceSize">Minimum Face Size:</label>
-          <input disabled value="20" id="minFaceSize" type="text" class="bold">
-        </div>
-        <button
-          class="waves-effect waves-light btn"
-          onclick="onDecreaseMinFaceSize()"
-        >
-          <i class="material-icons left">-</i>
-        </button>
-        <button
-          class="waves-effect waves-light btn"
-          onclick="onIncreaseMinFaceSize()"
-        >
-          <i class="material-icons left">+</i>
-        </button>
-      </div>
-    </span>
-    <!-- mtcnn_controls -->
-
+   
   </body>
 
   <script>
@@ -279,15 +192,13 @@
 
     async function run() {
       // load face detection, face landmark model and face recognition models
-      await changeFaceDetector(selectedFaceDetector)
+      if (!isFaceDetectionModelLoaded()) {
+        // dufault use:　SSD_MOBILENETV1, can be modified by selectedFaceDetector
+         await getCurrentFaceDetectionNet().load('/')
+      }      
       await faceapi.loadFaceLandmarkModel('/')
       await faceapi.loadFaceRecognitionModel('/')
-
-      // initialize face matcher with 1 reference descriptor per bbt character
-///      g_faceMatcher = await createBbtFaceMatcher(1)
      
-// await changeFaceDetector(TINY_FACE_DETECTOR)
-//      changeInputSize(128)
 
       // try to access users webcam and stream the images to the video element      
       ///need https
