@@ -25,13 +25,13 @@
     
 
     <div style="position: relative" class="margin">
-      <video onloadedmetadata="onPlay(this)" id="inputVideo" autoplay muted></video>
+      <video  id="inputVideo" autoplay muted></video>
       <button  class="waves-effect waves-light btn" onclick="startRollcall()">  <i class="material-icons left">开始点名</i> </button>        
       <button  class="waves-effect waves-light btn" onclick="stopRollcall()"> <i class="material-icons left">结束点名</i></button>        
     </div>
 
     <div style="position: relative" class="margin">      
-      <button  class="waves-effect waves-light btn" onclick="extractPhoto()">  <i class="material-icons left">选择要被点名的人</i> </button>              
+      <button  class="waves-effect waves-light btn" onclick="registerPhoto()">  <i class="material-icons left">选择要被点名的人</i> </button>              
     </div>
 
     <label for="facesContainer">演示从照片中得到要被点名的人</label>
@@ -72,7 +72,7 @@
       <div class="row side-by-side">
         <div class="row">
           <label for="attendeesList">点名结果</label>                              
-          <input disabled value="100" id="attendeesList" type="text" class="bold">          
+          <input disabled value="" id="attendeesList" type="text" class="bold">          
         </div>        
       </div>
     </span>
@@ -139,13 +139,13 @@
   </body>
 
   <script>
-    let faceMatcher = null
+    let g_FaceMatcher = null      /// 每个人对应的人脸特征信息（可以多个），通过这个来匹配    
     let roll_calling = true
-    let attendees = new Set()
-    let g_detections = new Array
-    let g_faceImages = new Array
+    let g_attendees = new Set()    
+    let g_faceImages = new Array  /// 目前采集到的人脸图像（要点名的人），一个人可能采集多次，只要有一个匹配上就行
+    let g_labeledFaceDescriptors = new Array  ///对应的人脸特征信息，可以使用数据库保存，并在老师本地（同步）缓存
 
-
+    //
     async function updateResults() {
       if (!roll_calling)
         return
@@ -154,19 +154,19 @@
         return
       }
 
-      if (!faceMatcher) {
+      if (!g_FaceMatcher) {
         alert("请先选择要被点名的人。")
         return
       }
 
-      const inputImgEl = $('#inputImg').get(0)
-      
+      //const inputImgEl = $('#inputImg').get(0)
      
       const videoEl = $('#inputVideo').get(0)
       if(videoEl.paused || videoEl.ended || !isFaceDetectionModelLoaded())
        return setTimeout(() => updateResults())
-    
-console.log("start to detect.")
+   
+
+      /// 从当前照片获取头像和头像特征信息
       const options = getFaceDetectorOptions()
       const results = await faceapi
         //.detectAllFaces(inputImgEl, options)
@@ -174,8 +174,6 @@ console.log("start to detect.")
         .withFaceLandmarks()
         .withFaceDescriptors()
 
-console.log("start to match and draw.")
-console.log(results.length)
 
       drawFaceRecognitionResults(results)
 
@@ -193,16 +191,16 @@ console.log(results.length)
       const resizedResults = faceapi.resizeResults(results, inputImgEl)
 
       resizedResults.forEach(({ detection, descriptor }) => {
-        const bestMatch = faceMatcher.findBestMatch(descriptor)
+        const bestMatch = g_FaceMatcher.findBestMatch(descriptor)
         const label = bestMatch.toString()
         const options = { label }
 
 
         if (bestMatch.label != "unknown") {
-          attendees.add(bestMatch.label)
+          g_attendees.add(bestMatch.label)
   
           let al = "";
-          for (a of attendees) {
+          for (a of g_attendees) {
             al += a + "; "
           }         
           $('#attendeesList').val(al)      
@@ -222,80 +220,65 @@ console.log(results.length)
       roll_calling = false;
     }
     
-    async function onPlay() {
-      return
-      const videoEl = $('#inputVideo').get(0)
 
-      if(videoEl.paused || videoEl.ended || !isFaceDetectionModelLoaded())
-        return setTimeout(() => onPlay())
-
-        
-/*
-      const options = getFaceDetectorOptions()
-      const ts = Date.now()
-   //   const result = await faceapi.detectSingleFace(videoEl, options)     
-
-///      updateTimeStats(Date.now() - ts)
-
-      if (result) {
-        const canvas = $('#overlay').get(0)
-        const dims = faceapi.matchDimensions(canvas, videoEl, true)
-        faceapi.draw.drawDetections(canvas, faceapi.resizeResults(result, dims))
-      }
-*/
-      setTimeout(() => onPlay())
-    }
-
-
-///// for extract photo
-    async function extractPhoto() {
+    /// 用户注册时，登记自己的头像
+    async function registerPhoto() {
       if (!isFaceDetectionModelLoaded()) {
         return
       }
 
       const videoEl = $('#inputVideo').get(0)
       if(videoEl.paused || videoEl.ended || !isFaceDetectionModelLoaded())
-       return setTimeout(() => extractPhoto())
+       return setTimeout(() => registerPhoto())
 
-      const inputImgEl = $('#inputImg').get(0)
+     // const inputImgEl = $('#inputImg').get(0)
       const options = getFaceDetectorOptions()
 
       const detections = await faceapi.detectAllFaces(videoEl, options)
       const faceImages = await faceapi.extractFaces(videoEl, detections)
 
-      g_detections = g_detections.concat(detections)
+      //   
+      if (faceImages.length === 0) {              
+        //$.messager.show({msg:"本次没找到人？光线太弱或者位置不正"})
+        return;
+      }
+      if (faceImages.length > 1) {
+        console.log("too many peoples!")
+        return;
+      }
+      
       g_faceImages = g_faceImages.concat(faceImages)
-
-      displayExtractedFaces(g_faceImages)
+      displayExtractedFaces()
 
       /// update matcher
-      faceMatcher = await createFaceMatcher()
+      g_FaceMatcher = await createFaceMatcher(faceImages)      
     }
-    function displayExtractedFaces(faceImages) {
+    function displayExtractedFaces() {
       $('#facesContainer').empty()
-      faceImages.forEach(canvas => $('#facesContainer').append(canvas))
+      g_faceImages.forEach(canvas => $('#facesContainer').append(canvas))
     }
 /////
 
-// fetch first image of each class and compute their descriptors
-async function createFaceMatcher() {
-  const maxAvailableImagesPerClass = 5
-  
-  var i = 1;
-  const labeledFaceDescriptors = await Promise.all(g_faceImages.map(
-    async img => {
-      const descriptors = []          
-      descriptors.push(await faceapi.computeFaceDescriptor(img))
-  
-      return new faceapi.LabeledFaceDescriptors(
-        "name_" + i++,
-        descriptors
-      )
-    }
-  ))
+    // fetch first image of each class and compute their descriptors
+    async function createFaceMatcher(faceImages) {
+      const maxAvailableImagesPerClass = 5
+      
+      var i = 1;
+      const labeledFaceDescriptors = await Promise.all(faceImages.map(
+        async img => {
+          const descriptors = []          
+          descriptors.push(await faceapi.computeFaceDescriptor(img))
+      
+          return new faceapi.LabeledFaceDescriptors(
+            "name_" + i++,
+            descriptors
+          )
+        }
+      ))
 
-  return new faceapi.FaceMatcher(labeledFaceDescriptors)
-}
+      g_labeledFaceDescriptors = g_labeledFaceDescriptors.concat(labeledFaceDescriptors)
+      return new faceapi.FaceMatcher(g_labeledFaceDescriptors)
+    }
 
 
     async function run() {
@@ -305,9 +288,8 @@ async function createFaceMatcher() {
       await faceapi.loadFaceRecognitionModel('/')
 
       // initialize face matcher with 1 reference descriptor per bbt character
-///      faceMatcher = await createBbtFaceMatcher(1)
+///      g_faceMatcher = await createBbtFaceMatcher(1)
      
-
 // await changeFaceDetector(TINY_FACE_DETECTOR)
 //      changeInputSize(128)
 
