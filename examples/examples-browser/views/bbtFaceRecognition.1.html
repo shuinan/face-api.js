@@ -51,7 +51,7 @@
   <script>
     let g_FaceMatcher = null      /// 每个人对应的人脸特征信息（可以多个），通过这个来匹配    
     let roll_calling = true
-    let g_attendees = new Set()    
+    let g_attendees = new Set()   /// 当前通过点到的人
     let g_faceImages = new Array  /// 目前采集到的人脸图像（要点名的人），一个人可能采集多次，只要有一个匹配上就行
     let g_labeledFaceDescriptors = new Array  ///对应的人脸特征信息，可以使用数据库保存，并在老师本地（同步）缓存
 
@@ -83,19 +83,21 @@
         .withFaceDescriptors()
 
 
-      drawFaceRecognitionResults(results)
+      matchFaceRecognitionResults(results)
 
       setTimeout(() => updateResults(), 1000)
     }
 
-    //match and draw
-    function drawFaceRecognitionResults(results) {
-      const canvas = $('#overlay').get(0)
+    //match 
+    function matchFaceRecognitionResults(results) {      
       const videoEl = $('#inputVideo').get(0)    
       videoEl.width = videoEl.videoWidth
-      videoEl.height = videoEl.videoHeight
-    
-      faceapi.matchDimensions(canvas, videoEl)
+      videoEl.height = videoEl.videoHeight    
+
+      // for drawBox
+      ///const canvas = $('#overlay').get(0)      
+      ///faceapi.matchDimensions(canvas, videoEl)
+
       // resize detection and landmarks in case displayed image is smaller than
       // original size
       const resizedResults = faceapi.resizeResults(results, videoEl)
@@ -166,9 +168,10 @@
       $('#facesContainer').empty()
       g_faceImages.forEach(canvas => $('#facesContainer').append(canvas))
     }
-/////
 
-    // fetch first image of each class and compute their descriptors
+
+    // 把某人的人脸特征加进去（一个人可以使用多个照片）
+    // 如果服务器要保存，就想要上传labeledFaceDescriptors
     async function createFaceMatcher(faceImages) {
       const maxAvailableImagesPerClass = 5
       
