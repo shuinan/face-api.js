@@ -18,16 +18,13 @@
     <div class="progress" id="loader">
       <div class="indeterminate"></div>
     </div>
-    <div style="position: relative" class="margin">
-      <img id="inputImg" src="" style="max-width: 800px;" />
-      <canvas id="overlay" />
-    </div>
-    
+        
 
     <div style="position: relative" class="margin">
       <video  id="inputVideo" autoplay muted></video>
       <button  class="waves-effect waves-light btn" onclick="startRollcall()">  <i class="material-icons left">开始点名</i> </button>        
       <button  class="waves-effect waves-light btn" onclick="stopRollcall()"> <i class="material-icons left">结束点名</i></button>        
+      <canvas id="overlay" />
     </div>
 
     <div style="position: relative" class="margin">      
@@ -158,8 +155,7 @@
         alert("请先选择要被点名的人。")
         return
       }
-
-      //const inputImgEl = $('#inputImg').get(0)
+     
      
       const videoEl = $('#inputVideo').get(0)
       if(videoEl.paused || videoEl.ended || !isFaceDetectionModelLoaded())
@@ -168,8 +164,7 @@
 
       /// 从当前照片获取头像和头像特征信息
       const options = getFaceDetectorOptions()
-      const results = await faceapi
-        //.detectAllFaces(inputImgEl, options)
+      const results = await faceapi      
         .detectAllFaces(videoEl, options)
         .withFaceLandmarks()
         .withFaceDescriptors()
@@ -183,12 +178,14 @@
     //match and draw
     function drawFaceRecognitionResults(results) {
       const canvas = $('#overlay').get(0)
-      const inputImgEl = $('#inputImg').get(0)
-
-      faceapi.matchDimensions(canvas, inputImgEl)
+      const videoEl = $('#inputVideo').get(0)    
+      videoEl.width = videoEl.videoWidth
+      videoEl.height = videoEl.videoHeight
+    
+      faceapi.matchDimensions(canvas, videoEl)
       // resize detection and landmarks in case displayed image is smaller than
       // original size
-      const resizedResults = faceapi.resizeResults(results, inputImgEl)
+      const resizedResults = faceapi.resizeResults(results, videoEl)
 
       resizedResults.forEach(({ detection, descriptor }) => {
         const bestMatch = g_FaceMatcher.findBestMatch(descriptor)
@@ -230,8 +227,7 @@
       const videoEl = $('#inputVideo').get(0)
       if(videoEl.paused || videoEl.ended || !isFaceDetectionModelLoaded())
        return setTimeout(() => registerPhoto())
-
-     // const inputImgEl = $('#inputImg').get(0)
+     
       const options = getFaceDetectorOptions()
 
       const detections = await faceapi.detectAllFaces(videoEl, options)
@@ -298,15 +294,10 @@
       const stream = await navigator.mediaDevices.getUserMedia({ video: true })      
       const videoEl = $('#inputVideo').get(0)
       videoEl.srcObject = stream
-
-      const inputImgEl = $('#inputImg').get(0)
-      inputImgEl.style.display = "none";
     }
 
     $(document).ready(function() {
       renderNavBar('#navbar', 'bbt_face_recognition')
-      initImageSelectionControls()
-      initFaceDetectionControls()
       run()
     })
   </script>
