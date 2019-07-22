@@ -157,12 +157,13 @@
         console.log("too many peoples!")
         return;
       }
+           
+
+      /// update matcher
+      g_FaceMatcher = await createFaceMatcher(faceImages)   
       
       g_faceImages = g_faceImages.concat(faceImages)
       displayExtractedFaces()
-
-      /// update matcher
-      g_FaceMatcher = await createFaceMatcher(faceImages)      
     }
     function displayExtractedFaces() {
       $('#facesContainer').empty()
@@ -175,7 +176,7 @@
     async function createFaceMatcher(faceImages) {
       const maxAvailableImagesPerClass = 5
       
-      var i = 1;
+      var i = g_faceImages.length;
       const labeledFaceDescriptors = await Promise.all(faceImages.map(
         async img => {
           const descriptors = []          
@@ -194,18 +195,11 @@
 
 
     async function run() {
-      // load face detection, face landmark model and face recognition models
-      if (!isFaceDetectionModelLoaded()) {
-        // dufault use:　SSD_MOBILENETV1, can be modified by selectedFaceDetector
-         await getCurrentFaceDetectionNet().load('/')
-      }      
-      await faceapi.loadFaceLandmarkModel('/')
-      await faceapi.loadFaceRecognitionModel('/')
-     
+      face_init()
 
       // try to access users webcam and stream the images to the video element      
       ///need https
-      const stream = await navigator.mediaDevices.getUserMedia({ video: {width:320, height:240}  })      
+      const stream = await navigator.mediaDevices.getUserMedia({ video: {width:640, height:480}  })      
       const videoEl = $('#inputVideo').get(0)
       videoEl.srcObject = stream
     }
@@ -214,6 +208,61 @@
       renderNavBar('#navbar', 'bbt_face_recognition')
       run()
     })
+
+
+
+
+      
+
+  async function face_init()
+  {
+      // load face detection, face landmark model and face recognition models
+      if (!isFaceDetectionModelLoaded()) {
+          // dufault use:　SSD_MOBILENETV1, can be modified by selectedFaceDetector
+          await getCurrentFaceDetectionNet().load('/')
+      } 
+      
+      await faceapi.loadFaceLandmarkModel('/')
+      await faceapi.loadFaceRecognitionModel('/')
+  }
+
+  async function face_computeFaceDescriptor(img)
+  {
+      return await faceapi.computeFaceDescriptor(img)          
+  }
+
+  /// videoElemen 是图片元素或者视频元素
+  // return: [{label, distance}]
+  async function face_matchFace(faceMatcher, videoElement)
+  {    
+      /// 从当前照片获取头像和头像特征信息
+      const options = getFaceDetectorOptions()
+      const results = await faceapi      
+        .detectAllFaces(videoElement, options)
+        .withFaceLandmarks()
+        .withFaceDescriptors()
+
+
+      videoElement.width = videoElement.videoWidth
+      videoElement.height = videoElement.videoHeight    
+
+      
+      // resize detection and landmarks in case displayed image is smaller than
+      // original size
+      const resizedResults = faceapi.resizeResults(results, videoElement)
+
+      const attendees = new Array
+      resizedResults.forEach(({ detection, descriptor }) => {
+        const bestMatch = faceMatcher.findBestMatch(descriptor)
+
+        if (bestMatch.label != "unknown") {
+          attendees.add(bestMatch.label)  
+        }
+      })
+    
+      return attendees; 
+  }
+
   </script>
 </body>
 </html>
