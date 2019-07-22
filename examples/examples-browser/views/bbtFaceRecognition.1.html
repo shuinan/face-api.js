@@ -55,6 +55,40 @@
     let g_faceImages = new Array  /// 目前采集到的人脸图像（要点名的人），一个人可能采集多次，只要有一个匹配上就行
     let g_labeledFaceDescriptors = new Array  ///对应的人脸特征信息，可以使用数据库保存，并在老师本地（同步）缓存
 
+
+
+    async function test_face_matchFace() {
+      if (!roll_calling)
+        return
+
+      if (g_labeledFaceDescriptors.length == 0) {
+        alert("请先选择要被点名的人。")
+        return
+      }
+
+
+      const videoEl = $('#inputVideo').get(0)
+      if(videoEl.paused || videoEl.ended || !isFaceDetectionModelLoaded())
+       return setTimeout(() => updateResults())
+   
+
+      let allDescriptors = new Array
+      let userIds = new Array
+      for ( var i = 0; i <g_labeledFaceDescriptors.length; i++){
+        allDescriptors.push(g_labeledFaceDescriptors[i].descriptors)
+        userIds.push(g_labeledFaceDescriptors[i].label)
+      }
+      attendees = await face_matchFace(allDescriptors, userIds, videoEl)
+      
+      let al = "";
+      for (a of attendees) {
+        al += a + "; "
+      }         
+      $('#attendeesList').val(al)  
+
+      setTimeout(() => test_face_matchFace(), 2000)
+    }
+
     //
     async function updateResults() {
       if (!roll_calling)
@@ -83,7 +117,7 @@
         .withFaceDescriptors()
 
 
-      matchFaceRecognitionResults(results)
+      matchFaceRecognitionResults(results)       
 
       setTimeout(() => updateResults(), 1000)
     }
@@ -126,7 +160,9 @@
     async function startRollcall() {
       // start processing image
       roll_calling = true;
-      updateResults()
+      //updateResults()
+
+      test_face_matchFace()
     }
     async function stopRollcall() {
       roll_calling = false;
@@ -160,7 +196,7 @@
            
 
       /// update matcher
-      g_FaceMatcher = await createFaceMatcher(faceImages)   
+      g_FaceMatcher = await createFaceMatcherByImgs(faceImages)   
       
       g_faceImages = g_faceImages.concat(faceImages)
       displayExtractedFaces()
@@ -173,14 +209,14 @@
 
     // 把某人的人脸特征加进去（一个人可以使用多个照片）
     // 如果服务器要保存，就想要上传labeledFaceDescriptors
-    async function createFaceMatcher(faceImages) {
+    async function createFaceMatcherByImgs(faceImages) {
       const maxAvailableImagesPerClass = 5
       
       var i = g_faceImages.length;
       const labeledFaceDescriptors = await Promise.all(faceImages.map(
         async img => {
           const descriptors = []          
-          descriptors.push(await faceapi.computeFaceDescriptor(img))
+          descriptors.push(await face_computeFaceDescriptor(img))
       
           return new faceapi.LabeledFaceDescriptors(
             "name_" + i++,
@@ -226,41 +262,67 @@
       await faceapi.loadFaceRecognitionModel('/')
   }
 
+  // 从图片提取特征， 返回Float32Array(128) 的特征数组
   async function face_computeFaceDescriptor(img)
   {
       return await faceapi.computeFaceDescriptor(img)          
   }
 
-  /// videoElemen 是图片元素或者视频元素
-  // return: [{label, distance}]
-  async function face_matchFace(faceMatcher, videoElement)
-  {    
-      /// 从当前照片获取头像和头像特征信息
-      const options = getFaceDetectorOptions()
-      const results = await faceapi      
-        .detectAllFaces(videoElement, options)
-        .withFaceLandmarks()
-        .withFaceDescriptors()
-
-
-      videoElement.width = videoElement.videoWidth
-      videoElement.height = videoElement.videoHeight    
-
-      
-      // resize detection and landmarks in case displayed image is smaller than
-      // original size
-      const resizedResults = faceapi.resizeResults(results, videoElement)
-
-      const attendees = new Array
-      resizedResults.forEach(({ detection, descriptor }) => {
-        const bestMatch = faceMatcher.findBestMatch(descriptor)
-
-        if (bestMatch.label != "unknown") {
-          attendees.add(bestMatch.label)  
+  async function createFaceMatcher(allDescriptors, userIds)
+  {      
+    //assert(allDescriptors.length == userIds.length)
+    let i = 0;
+      const labeledFaceDescriptors = await Promise.all(allDescriptors.map(
+        async descriptors => {          
+          return new faceapi.LabeledFaceDescriptors(
+            userIds[i++],
+            descriptors
+          )
         }
-      })
+      ))
+      
+      return new faceapi.FaceMatcher(labeledFaceDescriptors)
+    }
+
+
+  /// allDescriptors  二维数组 所有学生的人脸特征，每个学生可以有多个人脸特征
+  /// userIds  用户的id
+  /// videoElemen 是图片元素或者视频元素
+  // return: [{label, distance}]  其中label值是用户的id
+  async function face_matchFace(allDescriptors, userIds, videoElement)
+  {    
+    faceMatcher = await createFaceMatcher(allDescriptors, userIds)
+
+    if (!isFaceDetectionModelLoaded()) {
+      return
+    }
+
+    /// 从当前照片获取头像和头像特征信息
+    const options = getFaceDetectorOptions()
+    const results = await faceapi      
+      .detectAllFaces(videoElement, options)
+      .withFaceLandmarks()
+      .withFaceDescriptors()
+
+
+    videoElement.width = videoElement.videoWidth
+    videoElement.height = videoElement.videoHeight    
+
     
-      return attendees; 
+    // resize detection and landmarks in case displayed image is smaller than
+    // original size
+    const resizedResults = faceapi.resizeResults(results, videoElement)
+
+    const attendees = new Array
+    resizedResults.forEach(({ detection, descriptor }) => {
+      const bestMatch = faceMatcher.findBestMatch(descriptor)
+
+      if (bestMatch.label != "unknown") {
+        attendees.push(bestMatch.label)  
+      }
+    })
+  
+    return attendees; 
   }
 
   </script>
