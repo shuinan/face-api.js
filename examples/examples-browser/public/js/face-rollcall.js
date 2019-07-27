@@ -96,9 +96,10 @@
       .withFaceDescriptors()
 
 
-    videoElement.width = videoElement.videoWidth
-    videoElement.height = videoElement.videoHeight    
-
+      if (videoElement.tagName == "video" || videoElement.tagName == "VIDEO") {
+        videoElement.width = videoElement.videoWidth
+        videoElement.height = videoElement.videoHeight    
+      }
     
     // resize detection and landmarks in case displayed image is smaller than
     // original size

@@ -20,7 +20,9 @@
       <div class="indeterminate"></div>
     </div>
     
-    
+    <div style="position: relative" class="margin">
+      <img id="inputImg" src="QQ20190727155706.jpg" style="max-width: 800px;" />      
+    </div>
 
     <div style="position: relative" class="margin">
       <video  id="inputVideo" autoplay muted></video>
@@ -68,9 +70,10 @@
       }
 
 
-      const videoEl = $('#inputVideo').get(0)
-      if(videoEl.paused || videoEl.ended || !isFaceDetectionModelLoaded())
-       return setTimeout(() => updateResults())
+      const videoEl = $('#inputImg').get(0)
+///      const videoEl = $('#inputVideo').get(0)
+///      if(videoEl.paused || videoEl.ended || !isFaceDetectionModelLoaded())
+///       return setTimeout(() => updateResults())
    
 
       let allDescriptors = new Array
@@ -176,7 +179,8 @@
     
 
     async function test_registerPhoto_with_face_computeFaceDescriptor() {
-      const videoEl = $('#inputVideo').get(0)
+      //const videoEl = $('#inputVideo').get(0)
+      const videoEl = $('#inputImg').get(0)
       if(videoEl.paused || videoEl.ended || !isFaceDetectionModelLoaded())
        return setTimeout(() => registerPhoto())
      
@@ -203,6 +207,7 @@
       return new faceapi.FaceMatcher(g_labeledFaceDescriptors)
     }
 
+  
 
     /// 用户注册时，登记自己的头像
     async function registerPhoto() {
@@ -272,9 +277,9 @@
 
       // try to access users webcam and stream the images to the video element      
       ///need https
-      const stream = await navigator.mediaDevices.getUserMedia({ video: {width:640, height:480}  })      
-      const videoEl = $('#inputVideo').get(0)
-      videoEl.srcObject = stream
+ ///  const stream = await navigator.mediaDevices.getUserMedia({ video: {width:640, height:480}  })      
+ ///     const videoEl = $('#inputVideo').get(0)
+ ///     videoEl.srcObject = stream
     }
 
     $(document).ready(function() {
